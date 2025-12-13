@@ -1,0 +1,5 @@
+-- Session management configuration
+-- require("auto-session").setup()
+--
+--
+-- require("auto-session").setup({})
