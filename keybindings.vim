@@ -105,3 +105,8 @@ nnoremap <F13> <C-o>
 nnoremap <F14> <C-i>
 
 
+" Disable caps lock
+inoremap <CapsLock> <Nop>
+nnoremap <CapsLock> <Nop>
+vnoremap <CapsLock> <Nop>
+
