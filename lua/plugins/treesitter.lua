@@ -1,15 +1,15 @@
 -- Treesitter configuration
-require'nvim-treesitter.configs'.setup {
-  sync_install = false,
-
-  -- Always keep parsers updated
-  auto_install = true,
-
-  highlight = {
-    enable = true,              -- this turns on the colorful highlighting
-    additional_vim_regex_highlighting = false,  -- important: disables old regex (cleaner)
-  },
-
-  -- Optional: makes C# look even closer to Rider/VS Code
-  indent = { enable = true }
-}
+-- require'nvim-treesitter.configs'.setup {
+--   sync_install = false,
+--
+--   -- Always keep parsers updated
+--   auto_install = true,
+--
+--   highlight = {
+--     enable = true,              -- this turns on the colorful highlighting
+--     additional_vim_regex_highlighting = false,  -- important: disables old regex (cleaner)
+--   },
+--
+--   -- Optional: makes C# look even closer to Rider/VS Code
+--   indent = { enable = true }
+-- }

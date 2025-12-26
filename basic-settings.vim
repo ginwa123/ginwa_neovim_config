@@ -3,6 +3,10 @@ set termguicolors
 " set background=dark
 set clipboard=unnamedplus
 
+" fix yank
+xnoremap p "_dP
+
+
 " Colorscheme
 colorscheme moonfly     " ← change to whatever you like
 "colorscheme github_dark_high_contrast

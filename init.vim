@@ -21,7 +21,7 @@ require('plugins.ui')
 require('plugins.lsp')
 
 -- Treesitter for syntax highlighting
-require('plugins.treesitter')
+-- require('plugins.treesitter')
 
 -- Git integration
 require('plugins.lazygit')

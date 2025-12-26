@@ -46,7 +46,7 @@ Plug 'Exafunction/windsurf.nvim', { 'branch': 'main' }
 
 " Syntax and Treesitter
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
-Plug 'nvim-treesitter/nvim-treesitter-textobjects'
+"Plug 'nvim-treesitter/nvim-treesitter-textobjects'
 
 " Debugging
 Plug 'mfussenegger/nvim-dap'
@@ -59,7 +59,7 @@ Plug 'igorlfs/nvim-dap-view'
 " Testing
 Plug 'nvim-lua/plenary.nvim'
 Plug 'antoinemadec/FixCursorHold.nvim'
-Plug 'nvim-treesitter/nvim-treesitter'
+"Plug 'nvim-treesitter/nvim-treesitter'
 Plug 'nvim-neotest/nvim-nio'
 Plug 'nvim-neotest/neotest'
 Plug 'Issafalcon/neotest-dotnet'

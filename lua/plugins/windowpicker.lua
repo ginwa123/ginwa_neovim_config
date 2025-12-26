@@ -21,4 +21,4 @@ end)
 
 vim.keymap.set("n", "<A-h>", ":split<CR>")
 vim.keymap.set("n", "<A-v>", ":vsplit<CR>")
-vim.keymap.set("n", "<A-d>", "<C-w>c")
+vim.keymap.set("n", "<A-c>", "<C-w>c")
