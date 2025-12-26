@@ -1,14 +1,16 @@
 " Main Neovim configuration
-" This file loads all the modular configuration files
+" Cross-platform (Linux + Windows)
+
+let s:config = stdpath('config')
 
 " Load plugin declarations
-source ~/.config/nvim/plugins.vim
+execute 'source ' . s:config . '/plugins.vim'
 
 " Load basic settings
-source ~/.config/nvim/basic-settings.vim
+execute 'source ' . s:config . '/basic-settings.vim'
 
 " Load keybindings
-source ~/.config/nvim/keybindings.vim
+execute 'source ' . s:config . '/keybindings.vim'
 
 " Load Lua configurations
 lua << EOF
@@ -25,11 +27,8 @@ require('plugins.treesitter')
 require('plugins.lazygit')
 require('plugins.gitsigns')
 
-
 -- Window picker
 require('plugins.windowpicker')
-
-
 
 -- Debugging configuration
 require('config.debug')
@@ -43,9 +42,7 @@ require('config.database')
 -- Session management
 require('config.sessions')
 
-
+-- Terminal & statusline
 require('plugins.terminal')
-
 require('plugins.lualine')
 EOF
-

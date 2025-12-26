@@ -64,7 +64,26 @@ tnoremap <C-S-v> <C-\><C-n>"+pa
 
 	" === Neovide Transparency ===
 	" Background opacity (0.0 = fully transparent, 1.0 = solid)
+	
+if exists('g:neovide')
+  if has('win32') || has('win64')
+    " Windows: disable transparency (not supported)
+    let g:neovide_transparency = 1.0
+  else
+    " Linux / macOS
 	let g:neovide_opacity = 0.80
+  endif
+endif
+
+
+  " Zoom in
+  nnoremap <C-=> :let g:neovide_scale_factor += 0.1<CR>
+
+  " Zoom out
+  nnoremap <C--> :let g:neovide_scale_factor -= 0.1<CR>
+
+  " Reset zoom
+  nnoremap <C-0> :let g:neovide_scale_factor = 1.0<CR>
 
 	" Keep text fully opaque (important for readability)
 	let g:neovide_background_color = "#000000"
