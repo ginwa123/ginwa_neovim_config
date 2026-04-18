@@ -72,8 +72,10 @@ require('blink.cmp').setup({
 	},
 
 	fuzzy = {
-		prebuilt_binaries = { download = true },
-		implementation = 'rust',
+		implementation = "prefer_rust",
+		prebuilt_binaries = {
+			force_version = "latest",
+		},
 	},
 
 	sources = {
@@ -224,7 +226,7 @@ lspconfig.ts_ls.setup({
 			{
 				name = "@vue/typescript-plugin",
 				location = vim.fn.stdpath("data") ..
-				"/mason/packages/vue-language-server/node_modules/@vue/language-server",
+				    "/mason/packages/vue-language-server/node_modules/@vue/language-server",
 				languages = { "javascript", "typescript", "vue" },
 			},
 		},

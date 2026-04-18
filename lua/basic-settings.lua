@@ -3,6 +3,8 @@ local vim = vim
 
 vim.o.autoread = true
 
+vim.g.mapleader = " "
+
 -- Basic Neovim settings
 vim.opt.termguicolors = true
 vim.opt.clipboard = "unnamedplus"
