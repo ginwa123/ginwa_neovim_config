@@ -1,50 +1,61 @@
+---@diagnostic disable-next-line: undefined-global
+local vim = vim
+
+require("mason").setup({
+	registries = {
+		"github:mason-org/mason-registry",
+		"github:Crashdummyy/mason-registry",
+	},
+})
+
 -- LSP and completion configurations
 
+-- --
+-- require("codeium").setup({
+-- 	-- enable_cmp_source = false,
+-- 	virtual_text = {
+-- 		enabled = true,
 --
-require("codeium").setup({
-	-- enable_cmp_source = false,
-	virtual_text = {
-		enabled = true,
-
-		-- These are the defaults
-
-		-- Set to true if you never want completions to be shown automatically.
-		manual = false,
-		-- A mapping of filetype to true or false, to enable virtual text.
-		filetypes = {},
-		-- Whether to enable virtual text of not for filetypes not specifically listed above.
-		default_filetype_enabled = true,
-		-- How long to wait (in ms) before requesting completions after typing stops.
-		idle_delay = 75,
-		-- Priority of the virtual text. This usually ensures that the completions appear on top of
-		-- other plugins that also add virtual text, such as LSP inlay hints, but can be modified if
-		-- desired.
-		virtual_text_priority = 65535,
-		-- Set to false to disable all key bindings for managing completions.
-		map_keys = true,
-		-- The key to press when hitting the accept keybinding but no completion is showing.
-		-- Defaults to \t normally or <c-n> when a popup is showing.
-		accept_fallback = nil,
-		-- Key bindings for managing completions in virtual text mode.
-		key_bindings = {
-			-- Accept the current completion.
-			accept = "<Tab>",
-			-- Accept the next word.
-			accept_word = false,
-			-- Accept the next line.
-			accept_line = false,
-			-- Clear the virtual text.
-			clear = false,
-			-- Cycle to the next completion.
-			next = "<M-]>",
-			-- Cycle to the previous completion.
-			prev = "<M-[>",
-		}
-	}
-
-})
+-- 		-- These are the defaults
 --
-
+-- 		-- Set to true if you never want completions to be shown automatically.
+-- 		manual = false,
+-- 		-- A mapping of filetype to true or false, to enable virtual text.
+-- 		filetypes = {},
+-- 		-- Whether to enable virtual text of not for filetypes not specifically listed above.
+-- 		default_filetype_enabled = true,
+-- 		-- How long to wait (in ms) before requesting completions after typing stops.
+-- 		idle_delay = 75,
+-- 		-- Priority of the virtual text. This usually ensures that the completions appear on top of
+-- 		-- other plugins that also add virtual text, such as LSP inlay hints, but can be modified if
+-- 		-- desired.
+-- 		virtual_text_priority = 65535,
+-- 		-- Set to false to disable all key bindings for managing completions.
+-- 		map_keys = true,
+-- 		-- The key to press when hitting the accept keybinding but no completion is showing.
+-- 		-- Defaults to \t normally or <c-n> when a popup is showing.
+-- 		accept_fallback = nil,
+-- 		-- Key bindings for managing completions in virtual text mode.
+-- 		key_bindings = {
+-- 			-- Accept the current completion.
+-- 			accept = "<Tab>",
+-- 			-- Accept the next word.
+-- 			accept_word = false,
+-- 			-- Accept the next line.
+-- 			accept_line = false,
+-- 			-- Clear the virtual text.
+-- 			clear = false,
+-- 			-- Cycle to the next completion.
+-- 			next = "<M-]>",
+-- 			-- Cycle to the previous completion.
+-- 			prev = "<M-[>",
+-- 		}
+-- 	}
+--
+-- })
+--
+--
+--
 -- Blink completion
 require('blink.cmp').setup({
 	keymap = {
@@ -67,6 +78,8 @@ require('blink.cmp').setup({
 
 	sources = {
 		default = { 'lsp', 'path', 'snippets', 'buffer',
+			'supermaven',
+			-- 'cinvimsql'
 			-- 'dbee',
 			-- 'codeium'
 		},
@@ -74,6 +87,17 @@ require('blink.cmp').setup({
 			-- sql = { 'snippets', 'dbee', 'buffer' },
 		},
 		providers = {
+			supermaven = {
+				name = "supermaven",
+				module = "blink.compat.source",
+				score_offset = 3,
+			},
+			-- ginvimsql = {
+			-- 	name = "ginvimsql",
+			-- 	module = "blink.compat.source",
+			-- 	score_offset = 1
+			-- },
+
 			-- dbee = { name = 'dbee', module = 'blink.compat.source' },
 			-- codeium = { name = 'Codeium', module = 'codeium.blink', async = true },
 			path = { score_offset = 3 }, -- filesystem paths
@@ -134,7 +158,7 @@ require('blink.cmp').setup({
 
 		},
 		list = {
-			selection = { preselect = false, auto_insert = true },
+			selection = { preselect = false, auto_insert = false },
 		},
 	},
 
@@ -159,54 +183,6 @@ vim.api.nvim_create_autocmd('CompleteDone', {
 	end,
 })
 
--- vim.api.nvim_create_autocmd({"BufWritePost"}, {
---   pattern = "*.proto",
---   callback = function()
---     vim.cmd("LspRestart")
---   end,
--- })
-
---
---
--- -- Custom highlight groups - Black background with white border
--- -- Completion Menu
--- vim.api.nvim_set_hl(0, 'BlinkCmpMenu', { bg = '#000000', fg = '#ffffff' })
--- vim.api.nvim_set_hl(0, 'BlinkCmpMenuBorder', { fg = '#ffffff', bg = '#000000' })
--- vim.api.nvim_set_hl(0, 'BlinkCmpMenuSelection', { bg = '#333333', fg = '#ffffff', bold = true })
---
--- -- Scrollbar
--- vim.api.nvim_set_hl(0, 'BlinkCmpScrollBarThumb', { bg = '#ffffff' })
--- vim.api.nvim_set_hl(0, 'BlinkCmpScrollBarGutter', { bg = '#1a1a1a' })
---
--- -- Completion Items
--- vim.api.nvim_set_hl(0, 'BlinkCmpLabel', { fg = '#ffffff' })
--- vim.api.nvim_set_hl(0, 'BlinkCmpLabelDeprecated', { fg = '#888888', strikethrough = true })
--- vim.api.nvim_set_hl(0, 'BlinkCmpLabelMatch', { fg = '#ffffff', bold = true })
--- vim.api.nvim_set_hl(0, 'BlinkCmpLabelDetail', { fg = '#aaaaaa' })
--- vim.api.nvim_set_hl(0, 'BlinkCmpLabelDescription', { fg = '#aaaaaa' })
---
--- -- Kind (type icons/text)
--- vim.api.nvim_set_hl(0, 'BlinkCmpKind', { fg = '#ffffff' })
---
--- -- Source
--- vim.api.nvim_set_hl(0, 'BlinkCmpSource', { fg = '#aaaaaa' })
---
--- -- Ghost text
--- vim.api.nvim_set_hl(0, 'BlinkCmpGhostText', { fg = '#555555', italic = true })
---
--- -- Documentation Window
--- vim.api.nvim_set_hl(0, 'BlinkCmpDoc', { bg = '#000000', fg = '#ffffff' })
--- vim.api.nvim_set_hl(0, 'BlinkCmpDocBorder', { fg = '#ffffff', bg = '#000000' })
--- vim.api.nvim_set_hl(0, 'BlinkCmpDocSeparator', { fg = '#ffffff' })
--- vim.api.nvim_set_hl(0, 'BlinkCmpDocCursorLine', { bg = '#333333' })
---
--- -- Signature Help
--- vim.api.nvim_set_hl(0, 'BlinkCmpSignatureHelp', { bg = '#000000', fg = '#ffffff' })
--- vim.api.nvim_set_hl(0, 'BlinkCmpSignatureHelpBorder', { fg = '#ffffff', bg = '#000000' })
--- vim.api.nvim_set_hl(0, 'BlinkCmpSignatureHelpActiveParameter', { fg = '#ffffff', bold = true, underline = true })
---
---
---
 -- Mason
 require("mason").setup({
 	ui = {
@@ -217,38 +193,65 @@ require("mason").setup({
 		}
 	}
 })
+
+local function toggle_inlay_hints()
+	local bufnr = vim.api.nvim_get_current_buf()
+	local enabled = vim.lsp.inlay_hint.is_enabled({ bufnr = bufnr })
+	vim.lsp.inlay_hint.enable(not enabled, { bufnr = bufnr })
+end
+
+vim.keymap.set("n", "<leader>ih", toggle_inlay_hints, {
+	desc = "Toggle LSP inlay hints",
+})
+
+
+
 require("mason-lspconfig").setup({
 	automatic_installation = true,
+
 })
 require("mason-nvim-dap").setup({
 	automatic_installation = true,
 	handlers = {}, -- uses default handlers → perfect for 99% of users
 })
 
--- Symbol usage
-require('symbol-usage').setup({
-	vt_position = 'above', -- Show above the symbol: 'above' | 'end_of_line' | 'textwidth'
+local lspconfig = require("lspconfig")
+local configs = require("lspconfig.configs")
 
-	references = {
-		enabled = true,
-		include_declaration = false -- Don't count the declaration itself
+lspconfig.ts_ls.setup({
+	init_options = {
+		plugins = {
+			{
+				name = "@vue/typescript-plugin",
+				location = vim.fn.stdpath("data") ..
+				"/mason/packages/vue-language-server/node_modules/@vue/language-server",
+				languages = { "javascript", "typescript", "vue" },
+			},
+		},
 	},
-
-	definition = { enabled = false },
-	implementation = { enabled = false },
-
-	-- Text formatting
-	text_format = function(symbol)
-		local res = {}
-
-		if symbol.references then
-			local usage = symbol.references <= 1 and 'reference' or 'references'
-			table.insert(res, string.format('󰌹 %d %s', symbol.references, usage))
-		end
-
-		return table.concat(res, ', ')
-	end,
+	filetypes = {
+		"javascript",
+		"typescript",
+		"vue",
+	},
 })
+
+if not configs["zig-lsp-sql"] then
+	configs["zig-lsp-sql"] = {
+		default_config = {
+			name = "zig-lsp-sql", -- MUST match server's reported name!
+			cmd = { "/home/ginwa/ginvimsql/agent1/zig-lsp-sql/zig-out/bin/zig-lsp-sql" },
+			filetypes = { "sql" },
+			-- root_dir = function()
+			--   return vim.fn.getcwd()
+			-- end,
+			single_file_support = true,
+		},
+	}
+end
+
+lspconfig["zig-lsp-sql"].setup({})
+
 
 -- Diagnostic configuration - Disabled built-in diagnostics, using tiny-inline-diagnostic instead
 vim.diagnostic.config({
@@ -306,57 +309,11 @@ vim.cmd [[
   sign define DiagnosticSignHint    texthl=DiagnosticSignHint    linehl= numhl=DiagnosticLineNrHint
 ]]
 
--- Force all LSP clients to use the tiny-inline-diagnostic handler
--- vim.api.nvim_create_autocmd("LspAttach", {
---   callback = function(args)
---     local client = vim.lsp.get_client_by_id(args.data.client_id)
---     if client then
---       -- This replaces whatever handler the server or other plugins set
---       client.handlers["textDocument/publishDiagnostics"] =
---         require("tiny-inline-diagnostic").lsp_diagnostic_handler
---     end
---   end,
--- })
 
+-- enable the language server
+vim.lsp.enable('kotlin_lsp')
 
-
--- Formater
--- require("conform").setup({
--- 	formatters_by_ft = {
--- 		json = { "prettier" },
--- 		typescript = { "prettier" },
--- 		typescriptreact = { "prettier" },
--- 		javascript = { "prettier" },
--- 	},
--- }
--- )
-
--- vim.api.nvim_create_autocmd("BufWritePre", {
--- 	pattern = "*",
--- 	callback = function(args)
--- 		require("conform").format({ bufnr = args.buf })
--- 	end,
--- })
-
-
--- ALE configuration - Use LSP diagnostics instead of running its own linters
--- vim.g.ale_disable_lsp = 0 -- Enable ALE's LSP integration (changed from 1 to 0)
---
--- -- Tell ALE to use LSP for C# (not csc/mcs)
--- vim.g.ale_linters = {
--- 	cs = { 'OmniSharp' } -- Use OmniSharp via ALE's LSP integration
--- }
---
-
---
--- local lsp_triggered = false
--- vim.api.nvim_create_autocmd('LspAttach', {
--- 	callback = function(args)
--- 		if not lsp_triggered then
--- 			lsp_triggered = true
--- 			vim.defer_fn(function()
--- 				vim.lsp.buf.list_workspace_folders()
--- 			end, 1000)
--- 		end
--- 	end,
--- })
+-- configure language server's options
+vim.lsp.config('kotlin_lsp', {
+	single_file_support = false,
+})

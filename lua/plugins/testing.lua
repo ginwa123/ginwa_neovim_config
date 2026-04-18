@@ -1,21 +1,5 @@
--- Testing configuration with neotest
-
-local function find_dotnet_target(root)
-	-- prioritas: solution
-	local sln = vim.fn.glob(root .. "/*.sln", false, true)
-	if #sln > 0 then
-		return sln[1]
-	end
-
-	-- fallback: csproj
-	local csproj = vim.fn.glob(root .. "/**/*.csproj", false, true)
-	if #csproj > 0 then
-		return csproj[1]
-	end
-
-	return nil
-end
-
+---@diagnostic disable-next-line: undefined-global
+local vim = vim
 
 -- Helper function to find nearest project or solution
 local function find_nearest_project_or_solution()
