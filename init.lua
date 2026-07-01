@@ -58,7 +58,6 @@ vim.pack.add({
   -- elixir-tools pinned to stable tag
   { src = 'https://github.com/elixir-tools/elixir-tools.nvim', checkout = 'stable' },
 
-  -- blink.cmp requires a Rust build step
   {
     src = 'https://github.com/saghen/blink.cmp',
   },
@@ -76,6 +75,7 @@ vim.pack.add({
     },
   },
   'https://github.com/nvim-treesitter/nvim-treesitter-context',
+  'https://github.com/numtostr/comment.nvim',
   -- 'https://github.com/nvim-treesitter/nvim-treesitter-textobjects',
 
   -- Debugging
@@ -85,6 +85,7 @@ vim.pack.add({
   'https://github.com/theHamsta/nvim-dap-virtual-text',
   'https://github.com/jay-babu/mason-nvim-dap.nvim',
   'https://github.com/igorlfs/nvim-dap-view',
+  'https://github.com/JoosepAlviste/nvim-ts-context-commentstring',
 
   -- Testing
   'https://github.com/nvim-lua/plenary.nvim',
@@ -92,6 +93,9 @@ vim.pack.add({
   'https://github.com/nvim-neotest/neotest',
   'https://github.com/Issafalcon/neotest-dotnet',
 
+
+
+  'https://github.com/MeanderingProgrammer/render-markdown.nvim'
 })
 
 require('basic-settings')

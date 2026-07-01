@@ -203,7 +203,7 @@ vim.keymap.set("n", "<F12>", function()
 	require("dap").step_out()
 end, { desc = "Debug: Step out" })
 
-vim.keymap.set("n", "gb", function()
+vim.keymap.set("n", "<leader>db", function()
 	require("dap").toggle_breakpoint()
 end, { desc = "Debug: Toggle breakpoint" })
 
