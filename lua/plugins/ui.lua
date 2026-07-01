@@ -1,3 +1,6 @@
+---@diagnostic disable-next-line: undefined-global
+local vim = vim
+
 -- UI-related plugin configurations
 
 -- File explorer
@@ -8,7 +11,7 @@ require("nvim-tree").setup({
 	-- },
 	update_focused_file = {
 		enable = true,
-		update_root = true
+		-- update_root = true
 	},
 	view = {
 		width = 45,
@@ -29,15 +32,6 @@ require("nvim-tree").setup({
 })
 
 
--- Which-key
-require('which-key').setup()
--- local wk = require("which-key")
--- wk.add({
--- 	{ "<leader>e", "<cmd>NvimTreeToggle<cr>", desc = "File Explorer" },
--- 	{ "<leader>w", "<cmd>w<cr>",              desc = "Save" },
--- 	{ "<leader>q", "<cmd>q<cr>",              desc = "Quit" },
--- })
-
 -- FZF-Lua
 require('fzf-lua').setup({
 	keymap = {
@@ -49,26 +43,29 @@ require('fzf-lua').setup({
 })
 require('fzf-lua').register_ui_select()
 
--- Smooth scroll with neoscroll
--- local neoscroll = require('neoscroll')
--- vim.keymap.set("", "<ScrollWheelUp>", function()
---   neoscroll.scroll(-3, { move_cursor = false, duration = 0 })
--- end, { silent = true })
---
--- vim.keymap.set("", "<ScrollWheelDown>", function()
---   neoscroll.scroll(3, { move_cursor = false, duration = 0 })
--- end, { silent = true })
---
--- Smear cursor
 
 if vim.g.neovide then
-  require("smear_cursor").enabled = false
+	require("smear_cursor").enabled = false
 else
-  require("smear_cursor").enabled = true
+	-- require("smear_cursor").enabled = false
+
+	local smear_cursor = require("smear_cursor")
+	smear_cursor.setup({
+		opts = {                  -- Default  Range
+			stiffness = 0.8,  -- 0.6      [0, 1]
+			trailing_stiffness = 0.6, -- 0.45     [0, 1]
+			stiffness_insert_mode = 0.7, -- 0.5      [0, 1]
+			trailing_stiffness_insert_mode = 0.7, -- 0.5      [0, 1]
+			damping = 0.95,   -- 0.85     [0, 1]
+			damping_insert_mode = 0.95, -- 0.9      [0, 1]
+			distance_stop_animating = 0.5, -- 0.1      > 0
+		},
+	})
 end
 
 -- Indent lines`
-require("ibl").setup()
+-- require("ibl").setup()
 
 
--- require('mini.animate').setup()
+--
+require('mini.move').setup()

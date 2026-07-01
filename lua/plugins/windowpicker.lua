@@ -12,13 +12,4 @@ require('window-picker').setup({
 	},
 })
 -- --
-vim.keymap.set("n", "<A-w>", function()
-	local win = require('window-picker').pick_window({ hint = "floating-big-letter" })
-	if win ~= nil then
-		vim.api.nvim_set_current_win(win)
-	end
-end)
 
-vim.keymap.set("n", "<A-h>", ":split<CR>")
-vim.keymap.set("n", "<A-v>", ":vsplit<CR>")
-vim.keymap.set("n", "<A-c>", "<C-w>c")
