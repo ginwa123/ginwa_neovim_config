@@ -327,6 +327,28 @@ lsp("elixirls", {
 })
 
 -- =========================================================
+-- Go
+-- =========================================================
+
+lsp("gopls", {
+	capabilities = capabilities,
+
+	settings = {
+		gopls = {
+			hints = {
+				assignVariableTypes = true,
+				compositeLiteralFields = true,
+				compositeLiteralTypes = true,
+				constantValues = true,
+				functionTypeParameters = true,
+				parameterNames = true,
+				rangeVariableTypes = true,
+			},
+		},
+	},
+})
+
+-- =========================================================
 -- SQL Custom Server
 -- =========================================================
 
