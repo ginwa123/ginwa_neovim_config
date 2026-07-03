@@ -61,6 +61,9 @@ vim.pack.add({
   {
     src = 'https://github.com/saghen/blink.cmp',
   },
+  {
+    src = 'https://github.com/saghen/blink.lib',
+  },
 
   -- AI and Code Assistance
   -- 'https://github.com/Exafunction/windsurf.nvim',

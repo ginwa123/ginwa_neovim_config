@@ -52,11 +52,8 @@ require("blink.cmp").setup({
 	},
 
 	fuzzy = {
-		implementation = "prefer_rust",
+		implementation = "prefer_rust"
 
-		prebuilt_binaries = {
-			force_version = "latest",
-		},
 	},
 
 	sources = {
