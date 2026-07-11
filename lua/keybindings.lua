@@ -10,6 +10,8 @@ vim.keymap.set("n", "]e", function()
 	})
 end, { silent = true, desc = "Next ERROR" })
 
+vim.keymap.set("n", "<leader>fm", require("fzf-lua").marks, { silent = true, desc = "Find Marks" })
+
 vim.keymap.set("n", "[e", function()
 	vim.diagnostic.goto_prev({
 		severity = vim.diagnostic.severity.ERROR,
