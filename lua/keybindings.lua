@@ -123,12 +123,6 @@ vim.keymap.set("n", "<leader>fdS", function()
 	require("fzf-lua").lsp_workspace_symbols()
 end, { desc = "LSP Workspace symbols" })
 
-
-vim.keymap.set("n", "<leader>fe", function()
-	vim.diagnostic.setqflist({ severity = vim.diagnostic.severity.ERROR })
-	vim.cmd("copen")
-end, { silent = true, desc = "Error list (quickfix)" })
-
 vim.keymap.set("n", "<leader>fw", function()
 	require("fzf-lua").diagnostics_workspace({ severity_limit = "WARN" })
 end, { silent = true, desc = "Warning list (quickfix)" })

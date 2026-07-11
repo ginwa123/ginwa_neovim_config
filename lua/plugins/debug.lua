@@ -1476,607 +1476,6 @@ dap.configurations.cs = {
 
 	{
 		type = "coreclr",
-		name = "test - workspace (fast, no debug)",
-		request = "launch",
-
-		program = function()
-			local co = coroutine.running()
-
-			vim.notify("Finding all test projects in workspace...", vim.log.levels.INFO)
-
-			-- Find all test projects in the workspace
-			local test_projects = find_test_projects()
-
-			if #test_projects == 0 then
-				local projects = find_projects()
-				for _, proj in ipairs(projects) do
-					local tests_dir = proj.dir .. '/Tests'
-					if vim.fn.isdirectory(tests_dir) == 1 then
-						table.insert(test_projects, {
-							name = proj.name .. ' (Tests)',
-							dir = proj.dir,
-							csproj = proj.csproj,
-							is_embedded_tests = true,
-						})
-					end
-				end
-			end
-
-			if #test_projects == 0 then
-				vim.notify("No test projects found in workspace", vim.log.levels.WARN)
-				coroutine.resume(co, nil)
-				return coroutine.yield()
-			end
-
-			vim.notify(string.format("Found %d test project(s)", #test_projects), vim.log.levels.INFO)
-
-			-- Find solution file
-			local function find_solution_or_root()
-				local cwd = vim.fn.getcwd()
-				local sln_files = vim.fn.globpath(cwd, '*.sln', false, true)
-
-				if #sln_files > 0 then
-					return sln_files[1]
-				end
-
-				return nil
-			end
-
-			local solution_file = find_solution_or_root()
-
-			-- Build all test projects first
-			vim.notify('Building all test projects...', vim.log.levels.INFO)
-
-			-- Function to build projects
-			local function build_projects(callback)
-				if solution_file then
-					vim.system({ 'dotnet', 'build', solution_file, '-c', 'Debug' }, {
-						cwd = vim.fn.getcwd(),
-						text = true,
-					}, function(result)
-						vim.schedule(function()
-							if result.code ~= 0 then
-								vim.notify(
-									'Solution build failed:\n' ..
-									(result.stderr or result.stdout or ''),
-									vim.log.levels.ERROR)
-								callback(false)
-							else
-								vim.notify('Solution build successful!',
-									vim.log.levels.INFO)
-								callback(true)
-							end
-						end)
-					end)
-				else
-					-- Build each test project individually
-					local build_index = 1
-					local function build_next()
-						if build_index > #test_projects then
-							vim.schedule(function()
-								vim.notify('All test projects built successfully!',
-									vim.log.levels.INFO)
-								callback(true)
-							end)
-							return
-						end
-
-						local proj = test_projects[build_index]
-						vim.notify('Building ' .. proj.name .. '...', vim.log.levels.INFO)
-
-						vim.system({ 'dotnet', 'build', proj.csproj, '-c', 'Debug' }, {
-							cwd = vim.fn.getcwd(),
-							text = true,
-						}, function(result)
-							vim.schedule(function()
-								if result.code ~= 0 then
-									vim.notify(
-										'Build failed for ' ..
-										proj.name .. ':\n' ..
-										(result.stderr or result.stdout or ''),
-										vim.log.levels.ERROR)
-									callback(false)
-								else
-									build_index = build_index + 1
-									build_next()
-								end
-							end)
-						end)
-					end
-
-					build_next()
-				end
-			end
-
-			build_projects(function(success)
-				if not success then
-					coroutine.resume(co, nil)
-					return
-				end
-
-				vim.schedule(function()
-					vim.notify('Starting all tests in workspace...', vim.log.levels.INFO)
-
-					-- Capture test output for display
-					local test_output = {}
-					local output_file = vim.fn.getcwd() .. '/test-output-workspace.log'
-
-					-- Progress tracking
-					local tests_completed = 0
-					local tests_passed = 0
-					local tests_failed = 0
-					local last_progress_update = os.time()
-					local current_assembly = nil
-					local test_start_time = os.time()
-					local is_running = true
-					local last_output_time = os.time()
-
-					-- Heartbeat timer to show progress even if output parsing fails
-					local function heartbeat()
-						if not is_running then
-							return
-						end
-
-						local now = os.time()
-						local elapsed = now - test_start_time
-
-						-- Show heartbeat every 5 seconds if no other updates
-						if now - last_progress_update >= 5 then
-							local status_icon = tests_failed > 0 and "⚠" or "⏳"
-							local msg
-
-							if tests_completed > 0 then
-								msg = string.format(
-									"%s Running tests... %d completed (✓ %d | ✗ %d) - %ds elapsed",
-									status_icon, tests_completed, tests_passed,
-									tests_failed, elapsed)
-							else
-								msg = string.format(
-								"⏳ Running tests... %ds elapsed (waiting for results...)",
-									elapsed)
-							end
-
-							vim.schedule(function()
-								vim.notify(msg, vim.log.levels.INFO)
-							end)
-
-							last_progress_update = now
-						end
-
-						-- Schedule next heartbeat
-						vim.defer_fn(heartbeat, 5000) -- Check every 5 seconds
-					end
-
-					-- Start heartbeat
-					vim.defer_fn(heartbeat, 5000)
-
-					-- Prepare test command
-					local test_cmd = { 'dotnet', 'test' }
-
-					if solution_file then
-						table.insert(test_cmd, solution_file)
-					end
-
-					-- Add common arguments (no debug mode)
-					table.insert(test_cmd, '--no-build')
-					table.insert(test_cmd, '--logger:console;verbosity=detailed')
-
-					-- Start dotnet test
-					local job_id = vim.fn.jobstart(test_cmd, {
-						cwd = vim.fn.getcwd(),
-						stdout_buffered = false,
-						stderr_buffered = false,
-						on_stdout = function(j, data)
-							last_output_time = os.time()
-
-							for _, line in ipairs(data) do
-								if line ~= '' then
-									table.insert(test_output, line)
-
-									-- Track progress from output
-									local now = os.time()
-
-									-- Detect test assembly being run
-									local assembly = line:match(
-									'Test run for ([^%s]+%.dll)')
-									if assembly then
-										current_assembly = assembly:match(
-										'([^/\\]+)$')
-										vim.schedule(function()
-											vim.notify(
-											string.format(
-											"📦 Running tests: %s",
-												current_assembly),
-												vim.log.levels.INFO)
-										end)
-										last_progress_update = now
-									end
-
-									-- Detect test discovery
-									if line:match('Starting test execution') or line:match('A total of %d+ test files matched') then
-										vim.schedule(function()
-											vim.notify(
-											"🔍 Test discovery completed, executing tests...",
-												vim.log.levels.INFO)
-										end)
-										last_progress_update = now
-									end
-
-									-- Count completed tests - try multiple patterns
-									local test_found = false
-
-									-- Pattern 1: "  Passed TestName [time]"
-									if line:match('^%s+Passed%s+') then
-										tests_completed = tests_completed + 1
-										tests_passed = tests_passed + 1
-										test_found = true
-									end
-
-									-- Pattern 2: "  Failed TestName [time]"
-									if line:match('^%s+Failed%s+') then
-										tests_completed = tests_completed + 1
-										tests_failed = tests_failed + 1
-										test_found = true
-									end
-
-									-- Pattern 3: "Passed!  - " or "Failed!  - " (summary line)
-									if line:match('Passed!%s*%-') or line:match('Failed!%s*%-') then
-										-- Extract counts from summary
-										local summary_passed = tonumber(line
-										:match('Passed:%s*(%d+)'))
-										local summary_failed = tonumber(line
-										:match('Failed:%s*(%d+)'))
-
-										if summary_passed or summary_failed then
-											tests_passed = summary_passed or
-											tests_passed
-											tests_failed = summary_failed or
-											tests_failed
-											tests_completed = tests_passed +
-											tests_failed
-											test_found = true
-
-											vim.schedule(function()
-												local status_icon =
-												tests_failed > 0 and "✗" or
-												"✓"
-												vim.notify(
-													string.format(
-														"%s Assembly complete: %d tests | ✓ %d passed | ✗ %d failed",
-														status_icon,
-														tests_completed,
-														tests_passed,
-														tests_failed),
-													tests_failed > 0 and
-													vim.log.levels
-													.WARN or
-													vim.log.levels
-													.INFO)
-											end)
-											last_progress_update = now
-										end
-									end
-
-									-- Update progress for individual test completions
-									if test_found and not line:match('Passed!%s*%-') and not line:match('Failed!%s*%-') then
-										-- Update every 3 seconds or every 5 tests
-										if (now - last_progress_update >= 3) or (tests_completed % 5 == 0) then
-											last_progress_update = now
-											vim.schedule(function()
-												local status_icon =
-												tests_failed > 0 and "⚠" or
-												"✓"
-												vim.notify(
-													string.format(
-														"%s Progress: %d tests | ✓ %d passed | ✗ %d failed",
-														status_icon,
-														tests_completed,
-														tests_passed,
-														tests_failed),
-													vim.log.levels
-													.INFO)
-											end)
-										end
-									end
-								end
-							end
-						end,
-						on_stderr = function(j, data)
-							last_output_time = os.time()
-							for _, line in ipairs(data) do
-								if line ~= '' then
-									table.insert(test_output, line)
-								end
-							end
-						end,
-						on_exit = function(j, exit_code)
-							is_running = false -- Stop heartbeat
-
-							-- Parse test results and create formatted summary
-							local function format_test_results(output)
-								local formatted = {}
-								local failed_results = {}
-								local test_summaries = {}
-								local total_tests = 0
-								local passed_count = 0
-								local failed_count = 0
-								local skipped_count = 0
-								local current_asm = nil
-
-								-- Parse output for test results
-								for i, line in ipairs(output) do
-									local assembly = line:match(
-									'Test run for ([^%s]+%.dll)')
-									if assembly then
-										current_asm = assembly:match(
-										'([^/\\]+)$')
-									end
-
-									local failed_match = line:match '^%s*Failed%s+([%w_]+)%s*%[([^%]]+)%]'
-									if failed_match then
-										local test_name = failed_match
-										local test_duration = line:match '%[([^%]]+)%]' or
-										"N/A"
-
-										local actual_value = ""
-										local expected_value = ""
-
-										for j = i + 1, math.min(i + 15, #output) do
-											local curr_line = output[j]
-
-											if curr_line:match('Expected:') then
-												expected_value =
-												curr_line:match(
-												'Expected:%s*(.+)') or ""
-												expected_value =
-												expected_value:gsub(
-												"^%s+", ""):gsub("%s+$",
-													"")
-											end
-
-											if curr_line:match('But was:') then
-												actual_value = curr_line
-												:match('But was:%s*(.+)') or
-												""
-												actual_value =
-												actual_value:gsub("^%s+",
-													""):gsub("%s+$",
-													"")
-											end
-
-											if curr_line:match('Actual:') then
-												actual_value = curr_line
-												:match('Actual:%s*(.+)') or
-												""
-												actual_value =
-												actual_value:gsub("^%s+",
-													""):gsub("%s+$",
-													"")
-											end
-
-											if curr_line:match('^%s*Failed%s+[%w_]') or curr_line:match('^%d+%)') then
-												break
-											end
-										end
-
-										table.insert(failed_results, {
-											name = test_name,
-											duration = test_duration,
-											expected = expected_value,
-											actual = actual_value,
-											assembly = current_asm or
-											"Unknown"
-										})
-									end
-
-									if line:match('Failed!') or line:match('Passed!') then
-										local proj_failed = tonumber(line:match(
-										'Failed:%s*(%d+)')) or 0
-										local proj_passed = tonumber(line:match(
-										'Passed:%s*(%d+)')) or 0
-										local proj_skipped = tonumber(line:match(
-										'Skipped:%s*(%d+)')) or 0
-										local proj_total = tonumber(line:match(
-										'Total:%s*(%d+)')) or 0
-										local proj_dur = line:match(
-										    'Duration:%s*([%d%.]+%s*[smh]+)') or
-										    line:match('Duration:%s*([%d:%.]+)')
-
-										if proj_total > 0 then
-											table.insert(test_summaries, {
-												assembly = current_asm or
-												"Unknown",
-												failed = proj_failed,
-												passed = proj_passed,
-												skipped = proj_skipped,
-												total = proj_total,
-												duration = proj_dur or
-												"N/A"
-											})
-										end
-
-										failed_count = failed_count + proj_failed
-										passed_count = passed_count + proj_passed
-										skipped_count = skipped_count +
-										proj_skipped
-										total_tests = total_tests + proj_total
-									end
-								end
-
-								-- Build summary
-								table.insert(formatted,
-									"╔════════════════════════════════════════════════════════════════════════╗")
-								table.insert(formatted,
-									"║                    WORKSPACE TEST RESULTS SUMMARY                      ║")
-								table.insert(formatted,
-									"╠════════════════════════════════════════════════════════════════════════╣")
-								table.insert(formatted,
-									string.format("║  Total Tests: %-56d ║",
-										total_tests))
-								table.insert(formatted,
-									string.format("║  ✓ Passed: %-59d ║",
-										passed_count))
-								table.insert(formatted,
-									string.format("║  ✗ Failed: %-59d ║",
-										failed_count))
-								if skipped_count > 0 then
-									table.insert(formatted,
-										string.format("║  ⊘ Skipped: %-58d ║",
-											skipped_count))
-								end
-								table.insert(formatted,
-									"╚════════════════════════════════════════════════════════════════════════╝")
-								table.insert(formatted, "")
-
-								-- Show per-project summaries
-								if #test_summaries > 0 then
-									table.insert(formatted, "PER-PROJECT RESULTS:")
-									table.insert(formatted,
-										"═══════════════════════════════════════════════════════════════════════════")
-									for _, summary in ipairs(test_summaries) do
-										table.insert(formatted,
-											string.format("📦 %s",
-												summary.assembly))
-										table.insert(formatted,
-											string.format(
-												"   Total: %d | ✓ Passed: %d | ✗ Failed: %d | Duration: %s",
-												summary.total,
-												summary.passed,
-												summary.failed,
-												summary.duration))
-										table.insert(formatted, "")
-									end
-								end
-
-								-- Show failed tests with details
-								if #failed_results > 0 then
-									table.insert(formatted, "✗ FAILED TESTS:")
-									table.insert(formatted,
-										"═══════════════════════════════════════════════════════════════════════════")
-
-									local by_assembly = {}
-									for _, result in ipairs(failed_results) do
-										if not by_assembly[result.assembly] then
-											by_assembly[result.assembly] = {}
-										end
-										table.insert(
-										by_assembly[result.assembly], result)
-									end
-
-									for assembly, results in pairs(by_assembly) do
-										table.insert(formatted,
-											string.format("📦 %s:", assembly))
-										for i, result in ipairs(results) do
-											table.insert(formatted,
-												string.format(
-													"   %d. ✗ %s [%s]",
-													i, result.name,
-													result.duration))
-
-											if result.expected and result.expected ~= "" then
-												table.insert(formatted,
-													string.format(
-													"      Expected: %s",
-														result.expected))
-											end
-
-											if result.actual and result.actual ~= "" then
-												table.insert(formatted,
-													string.format(
-													"      Actual:   %s",
-														result.actual))
-											end
-
-											table.insert(formatted, "")
-										end
-									end
-								end
-
-								if passed_count > 0 and failed_count == 0 then
-									table.insert(formatted, "✓ ALL TESTS PASSED!")
-									table.insert(formatted,
-										"═══════════════════════════════════════════════════════════════════════════")
-									table.insert(formatted,
-										string.format(
-										"🎉 All %d tests passed successfully!",
-											passed_count))
-									table.insert(formatted, "")
-								end
-
-								-- Add separator before raw output
-								table.insert(formatted, "")
-								table.insert(formatted,
-									"═══════════════════════════════════════════════════════════════════════════")
-								table.insert(formatted,
-									"                            RAW TEST OUTPUT                                ")
-								table.insert(formatted,
-									"═══════════════════════════════════════════════════════════════════════════")
-								table.insert(formatted, "")
-
-								-- Add raw output
-								for _, line in ipairs(output) do
-									table.insert(formatted, line)
-								end
-
-								return formatted
-							end
-
-							local formatted_output = format_test_results(test_output)
-
-							-- Save formatted output to file
-							local f = io.open(output_file, 'w')
-							if f then
-								for _, line in ipairs(formatted_output) do
-									f:write(line .. '\n')
-								end
-								f:close()
-
-								vim.g.test_output_file = output_file
-
-								-- Open the output in a buffer
-								vim.schedule(function()
-									vim.cmd('edit ' .. output_file)
-									vim.cmd('setlocal filetype=testresult')
-									vim.cmd('setlocal nowrap')
-
-									local total_time = os.time() - test_start_time
-
-									if failed_count > 0 then
-										vim.notify(
-										string.format(
-											"✗ Tests completed in %ds: %d passed, %d failed",
-											total_time, passed_count,
-											failed_count),
-											vim.log.levels.WARN)
-									else
-										vim.notify(
-										string.format(
-											"✓ All %d tests passed in %ds!",
-											passed_count, total_time),
-											vim.log.levels.INFO)
-									end
-								end)
-							end
-						end
-					})
-
-					-- Don't return a program - we're handling everything ourselves
-					coroutine.resume(co, "/bin/true") -- Return a dummy program that does nothing
-				end)
-			end)
-
-			return coroutine.yield()
-		end,
-
-		args = function()
-			return {}
-		end,
-
-		cwd = '${workspaceFolder}',
-		stopAtEntry = false,
-	},
-	{
-		type = "coreclr",
 		name = "attach - netcoredbg",
 		request = "attach",
 		processId = require('dap.utils').pick_process,
@@ -2215,6 +1614,104 @@ dap.adapters.delve = {
 	}
 }
 
+-- Helper: auto-find main.go (interactive picker for multiple matches).
+-- Returns the chosen main.go path. Falls back to the current buffer
+-- when nothing is found or the user cancels.
+-- Used by both "Debug main (auto-find)" and "Debug main (auto-find) with arguments".
+local function find_main_go()
+	local cmd = 'find ' ..
+	    vim.fn.shellescape(vim.fn.getcwd()) .. ' -name "main.go" -type f 2>/dev/null | head -10'
+	local handle = io.popen(cmd)
+
+	if not handle then
+		vim.notify("Failed to search for main.go", vim.log.levels.ERROR)
+		return vim.fn.expand("%:p")
+	end
+
+	local result = handle:read("*a")
+	handle:close()
+
+	local files = {}
+	for file in result:gmatch("[^\n]+") do
+		table.insert(files, file)
+	end
+
+	if #files == 0 then
+		vim.notify("No main.go found, using current file", vim.log.levels.WARN)
+		return vim.fn.expand("%:p")
+	elseif #files == 1 then
+		vim.notify("Debugging: " .. files[1], vim.log.levels.INFO)
+		return files[1]
+	else
+		print("Multiple main.go files found:")
+		for i, file in ipairs(files) do
+			print(string.format("[%d] %s", i, file))
+		end
+		local choice = vim.fn.input('Select file (1-' .. #files .. '): ')
+		local idx = tonumber(choice)
+		if idx and files[idx] then
+			vim.notify("Debugging: " .. files[idx], vim.log.levels.INFO)
+			return files[idx]
+		else
+			vim.notify("Invalid choice, using first file", vim.log.levels.WARN)
+			return files[1]
+		end
+	end
+end
+
+-- Helper: find the Go test function at cursor (or above cursor).
+-- Walks upward from the cursor to the nearest `func Xxx(...)` declaration.
+-- Returns the function name (e.g. "TestFoo") if a test-like function
+-- (Test*, Benchmark*, Fuzz*, Example*) is found, otherwise nil.
+-- Warns the user when the buffer/file/function isn't suitable so the
+-- caller can decide whether to fall back to running the whole package.
+local function find_go_test_at_cursor()
+	local current_file = vim.fn.expand('%:p')
+	if not current_file:match('_test%.go$') then
+		vim.notify("Not in a _test.go file", vim.log.levels.WARN)
+		return nil
+	end
+
+	local cursor_line = vim.fn.line('.')
+	local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+
+	-- Walk upward from cursor to find the enclosing func declaration.
+	local func_name = nil
+	for i = cursor_line, 1, -1 do
+		local line = lines[i]
+		local name = line:match('^func%s+([%w_]+)%s*%(')
+		if name then
+			func_name = name
+			break
+		end
+	end
+
+	if not func_name then
+		vim.notify("No func found above cursor", vim.log.levels.WARN)
+		return nil
+	end
+
+	-- Only return test-like functions (Test, Benchmark, Fuzz, Example).
+	-- Plain helpers like `func setupTest()` are excluded intentionally.
+	if func_name:match('^Test')
+	   or func_name:match('^Benchmark')
+	   or func_name:match('^Fuzz')
+	   or func_name:match('^Example') then
+		return func_name
+	end
+
+	vim.notify("Function '" .. func_name .. "' is not a test function",
+		vim.log.levels.WARN)
+	return nil
+end
+
+-- Captured by the args() function of "test - delve current line function"
+-- so the post-session `go test -v` job (see listener below) knows which
+-- test to run and which package directory to use. Lives at module scope
+-- so the args() closure (defined further down) can write to it and the
+-- event_terminated listener can read it.
+local current_test_run = nil
+
 dap.configurations.go = {
 	{
 		type = "delve",
@@ -2237,45 +1734,16 @@ dap.configurations.go = {
 		type = "delve",
 		name = "Debug main (auto-find)",
 		request = "launch",
-		program = function()
-			local cmd = 'find ' ..
-			    vim.fn.shellescape(vim.fn.getcwd()) .. ' -name "main.go" -type f 2>/dev/null | head -10'
-			local handle = io.popen(cmd)
-
-			if not handle then
-				vim.notify("Failed to search for main.go", vim.log.levels.ERROR)
-				return vim.fn.expand("%:p")
-			end
-
-			local result = handle:read("*a")
-			handle:close()
-
-			local files = {}
-			for file in result:gmatch("[^\n]+") do
-				table.insert(files, file)
-			end
-
-			if #files == 0 then
-				vim.notify("No main.go found, using current file", vim.log.levels.WARN)
-				return vim.fn.expand("%:p")
-			elseif #files == 1 then
-				vim.notify("Debugging: " .. files[1], vim.log.levels.INFO)
-				return files[1]
-			else
-				print("Multiple main.go files found:")
-				for i, file in ipairs(files) do
-					print(string.format("[%d] %s", i, file))
-				end
-				local choice = vim.fn.input('Select file (1-' .. #files .. '): ')
-				local idx = tonumber(choice)
-				if idx and files[idx] then
-					vim.notify("Debugging: " .. files[idx], vim.log.levels.INFO)
-					return files[idx]
-				else
-					vim.notify("Invalid choice, using first file", vim.log.levels.WARN)
-					return files[1]
-				end
-			end
+		program = find_main_go,
+	},
+	{
+		type = "delve",
+		name = "Debug main (auto-find) with arguments",
+		request = "launch",
+		program = find_main_go,
+		args = function()
+			local args_string = vim.fn.input('Arguments: ')
+			return vim.split(args_string, " +")
 		end,
 	},
 	{
@@ -2284,6 +1752,44 @@ dap.configurations.go = {
 		request = "launch",
 		program = "${workspaceFolder}/backend_go/cmd/agent-bond",
 		cwd = "${workspaceFolder}/backend_go",
+	},
+	{
+		type = "delve",
+		name = "test - delve current line function",
+		request = "launch",
+		mode = "test",
+		-- IMPORTANT: use ${fileDirname} (the package directory), NOT
+		-- ${file} (the single test file). When go test -c is given a
+		-- single file, Go compiles it as the synthetic
+		-- "command-line-arguments" package and CANNOT see symbols
+		-- defined in sibling files in the same directory (e.g. shared
+		-- mocks, fixtures, helpers like `mockSqlDb` or `validChargeCodes`
+		-- that live in a sibling *_test.go file). Passing the directory
+		-- tells go test -c to compile the whole package, so every
+		-- helper is available, then -test.run narrows execution to
+		-- just the function at the cursor.
+		program = "${fileDirname}",
+		args = function()
+			local func_name = find_go_test_at_cursor()
+			if not func_name then
+				-- Fallback: run all tests in the package (Delve behaviour
+				-- when -test.run is omitted).
+				return {}
+			end
+			vim.notify("Running test: " .. func_name, vim.log.levels.INFO)
+			-- Capture for the post-session `go test -v` job (see the
+			-- flush_test_output listener below) that writes the verbose
+			-- test result to ./test-output.log. Captured here because
+			-- args() is the only place where we know both the test
+			-- function name AND the package directory at launch time.
+			current_test_run = {
+				func_name = func_name,
+				package_dir = vim.fn.expand('%:p:h'),
+			}
+			-- -test.run "^TestXxx$" matches ONLY this function (anchored
+			-- with ^/$). -test.v gives us per-test verbose output.
+			return { "-test.run", "^" .. func_name .. "$", "-test.v" }
+		end,
 	},
 }
 
@@ -2307,6 +1813,96 @@ vim.api.nvim_create_user_command('DapLog', function()
 	local log_path = vim.fn.stdpath('cache') .. '/dap.log'
 	vim.cmd('edit ' .. log_path)
 end, {})
+
+-- Capture test output for "test - delve current line function".
+-- Mirrors the C# netcoredbg version's UX (test-output.log auto-opened
+-- in a buffer): when the Delve debug session ends, run `go test -v`
+-- as a SEPARATE job against the same test/package, capture its
+-- output, and write it to ./test-output.log so the user can read the
+-- final result (=== RUN / --- PASS / --- FAIL / t.Log* lines).
+--
+-- Why run a separate `go test -v` instead of listening to nvim-dap's
+-- event_output events? Because Delve only forwards its own REPL banner
+-- as output events while the test binary is paused at a breakpoint —
+-- the test binary's stdout (which is what `go test -v` produces) is
+-- NOT reliably forwarded during interactive debugging. Running
+-- `go test -v` ourselves once the debug session is over guarantees we
+-- always get the final result, regardless of how the user stepped.
+--
+-- current_test_run (declared above) is populated by the args() function
+-- in dap.configurations.go — that's the only point where we know both
+-- the test function name AND the package directory at launch time.
+local function capture_test_output(run)
+	local func_name = run.func_name
+	local package_dir = run.package_dir
+
+	-- Build: go test -v -run '^FuncName$' .
+	-- `.` means "the current package" (combined with cwd=package_dir).
+	-- -v gives verbose output with === RUN / --- PASS / --- FAIL lines.
+	local cmd = { 'go', 'test', '-v' }
+	if func_name and func_name ~= '' then
+		table.insert(cmd, '-run')
+		table.insert(cmd, '^' .. func_name .. '$')
+	end
+	table.insert(cmd, '.')
+
+	local output_file = vim.fn.getcwd() .. '/test-output.log'
+	local lines = {}  -- accumulated by on_stdout / on_stderr; used by on_exit
+	vim.fn.jobstart(cmd, {
+		cwd = package_dir,
+		stdout_buffered = false,
+		stderr_buffered = false,
+		-- `data` is a list[str] (one chunk per read cycle). Empty strings
+		-- are inserted by Neovim as separators; we filter them so the
+		-- file isn't padded with blank lines.
+		on_stdout = function(_, data)
+			for _, line in ipairs(data) do
+				if line ~= '' then
+					table.insert(lines, line)
+				end
+			end
+		end,
+		on_stderr = function(_, data)
+			for _, line in ipairs(data) do
+				if line ~= '' then
+					table.insert(lines, line)
+				end
+			end
+		end,
+		on_exit = function(_, code)
+			local f = io.open(output_file, 'w')
+			if f then
+				for _, line in ipairs(lines) do
+					f:write(line)
+					f:write('\n')
+				end
+				f:close()
+				vim.g.test_output_file = output_file
+				vim.schedule(function()
+					vim.cmd('edit ' .. output_file)
+				end)
+			end
+			-- Surface a quick PASS/FAIL/WARN notify too, mirroring the
+			-- C# version's "Test process exited with code: N" pattern.
+			vim.schedule(function()
+				vim.notify(
+					string.format('Test %s: exit code %d (output: %s)',
+						func_name or '<unknown>', code, output_file),
+					code == 0 and vim.log.levels.INFO or vim.log.levels.WARN)
+			end)
+		end,
+	})
+end
+
+dap.listeners.after['event_terminated']['flush_test_output'] = function(session, _)
+	if not session.config or session.config.name ~= 'test - delve current line function' then
+		return
+	end
+	if not current_test_run then return end
+	local run = current_test_run
+	current_test_run = nil  -- consume so a subsequent session starts fresh
+	capture_test_output(run)
+end
 
 -- Add command to test if delve works
 vim.api.nvim_create_user_command('DapTestDelve', function()
