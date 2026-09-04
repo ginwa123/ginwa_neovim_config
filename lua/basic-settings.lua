@@ -16,10 +16,19 @@ vim.opt.foldmethod = 'syntax'
 vim.opt.foldlevel = 99
 
 -- Colorscheme
--- vim.cmd.colorscheme("kanagawa-dragon")
--- vim.cmd.colorscheme("github_dark_high_contrast")
 vim.cmd.colorscheme("kanagawa-dragon")
-vim.api.nvim_set_hl(0, "Normal", { bg = "none" }) -- Transparent background
+-- vim.cmd.colorscheme("github_dark_high_contrast")
+-- vim.cmd.colorscheme("kanagawa-dragon")
+--
+-- moonfly only
+-- vim.cmd.colorscheme("moonfly")
+-- local function hl(group, opts) vim.api.nvim_set_hl(0, group, opts) end
+-- hl("CmpItemKindKeyword", { fg = "#c579dc" })           -- moonfly purple
+-- hl("CmpItemKindStruct", { fg = "#9ed06c" })            -- moonfly green
+-- hl("CmpItemKindConstant", { fg = "#f09479" })          -- moonfly orange
+--
+
+vim.api.nvim_set_hl(0, "Normal", { bg = "none" })      -- Transparent background
 vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" }) -- Transaparent background
 
 -- Show line numbers
@@ -50,6 +59,10 @@ vim.g.loaded_netrw = 1
 vim.g.loaded_netrwPlugin = 1
 
 vim.opt.relativenumber = false
+
+vim.opt.expandtab = true
+vim.opt.tabstop = 4
+vim.opt.shiftwidth = 4
 
 -- Remap arrow keys in normal mode to hjkl
 vim.keymap.set("n", "<Up>", "k")

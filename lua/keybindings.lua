@@ -47,20 +47,6 @@ vim.keymap.set("n", "[h", function()
 	})
 end, { silent = true, desc = "Previous HINT" })
 
-vim.keymap.set("n", "[q", function()
-	vim.diagnostic.goto_prev({
-		severity = vim.diagnostic.severity.QUICKFIX,
-		float = { border = "rounded", focusable = false }
-	})
-end, { silent = true, desc = "Previous QUICKFIX" })
-
-vim.keymap.set("n", "]q", function()
-	vim.diagnostic.goto_next({
-		severity = vim.diagnostic.severity.QUICKFIX,
-		float = { border = "rounded", focusable = false }
-	})
-end, { silent = true, desc = "Next QUICKFIX" })
-
 -- Neovim tree
 vim.keymap.set("n", "<leader>e", "<cmd>NvimTreeToggle<CR>", { desc = "Toggle NvimTree" })
 
@@ -84,10 +70,13 @@ vim.keymap.set("n", "<leader><space>", function()
 	require("fzf-lua").live_grep({ resume = true })
 end, { desc = "Live grep (ripgrep)" })
 
+vim.keymap.set("n", "<leader>fc", function()
+	require("fzf-lua").grep_cword()
+end, { desc = "Grep word under cursor" })
 
-vim.keymap.set("n", "<leader>S", function()
-	require("fzf-lua").live_grep({ resume = false })
-end, { desc = "Grep (ripgrep fresh)" })
+vim.keymap.set("n", "<leader>fC", function()
+	require("fzf-lua").grep({ search = vim.fn.expand("<cWORD>") })
+end, { desc = "Grep WORD under cursor (includes brackets/punct)" })
 
 vim.keymap.set("n", "<leader>fb", function()
 	require("fzf-lua").buffers()
