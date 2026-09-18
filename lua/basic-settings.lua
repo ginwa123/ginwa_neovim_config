@@ -28,8 +28,12 @@ vim.cmd.colorscheme("kanagawa-dragon")
 -- hl("CmpItemKindConstant", { fg = "#f09479" })          -- moonfly orange
 --
 
-vim.api.nvim_set_hl(0, "Normal", { bg = "none" })      -- Transparent background
-vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" }) -- Transaparent background
+-- Transparent background (Linux only: on Windows it wipes out the
+-- kanagawa-dragon dark background and shows the terminal backdrop instead)
+if vim.fn.has('win32') == 0 then
+	vim.api.nvim_set_hl(0, "Normal", { bg = "none" })      -- Transparent background
+	vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" }) -- Transaparent background
+end
 
 -- Show line numbers
 vim.opt.number = true
