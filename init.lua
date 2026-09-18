@@ -106,6 +106,6 @@ require('basic-settings')
 require('keybindings')
 
 for _, file in ipairs(vim.fn.globpath(vim.fn.stdpath('config') .. '/lua/plugins', '*.lua', false, true)) do
-	local module = file:match('lua/plugins/(.+)%.lua$')
+	local module = file:match('lua[/\\]plugins[/\\](.+)%.lua$')
 	require('plugins.' .. module)
 end
