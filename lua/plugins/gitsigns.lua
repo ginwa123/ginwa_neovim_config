@@ -2,15 +2,18 @@
 --
 -- Besides signs/hunks this shows inline blame (`current_line_blame = true`).
 -- gitsigns has no `<branch>` placeholder, so the formatter below is a function:
--- it resolves `sha -> branch` with git (cached, one call per commit) and puts
--- the branch of the *blamed commit* in front of the usual blame text.
+-- it resolves `sha -> branch` with git (cached, once per commit) and puts the
+-- branch of the *blamed commit* in front of the usual blame text.
+--
+-- The *closest* branch wins. A merged commit is "contained" by every branch
+-- that has it, so a long-lived `staging`/`main` usually shows up as well -
+-- those tips are just far ahead. `git name-rev` picks the branch the commit
+-- actually lives on instead, e.g. `feat/checkout` and not `staging`.
 
 local api = vim.api
 
--- sha -> label ('main', 'main (+2)', ...). '' means "no branch found".
+-- sha -> branch name ('' when the commit is on no branch/ref).
 local branch_cache = {}
--- cwd -> current branch ('' when HEAD is detached)
-local head_cache = {}
 
 --- Run git synchronously. Returns nil on failure.
 ---@param args string[]
@@ -26,17 +29,47 @@ local function git(args, cwd)
 	return obj.stdout or ''
 end
 
+---@class BlameBranch
+---@field ref string full ref name, usable with `name-rev --refs=`
+---@field name string short name, for display
+
+--- Branches that contain `sha`, local first, remotes only if there is none.
+---@param sha string
 ---@param cwd string
----@return string
-local function current_branch(cwd)
-	if head_cache[cwd] == nil then
-		local out = git({ 'git', 'symbolic-ref', '--quiet', '--short', 'HEAD' }, cwd)
-		head_cache[cwd] = out and vim.trim(out) or ''
+---@return BlameBranch[]
+local function branches_containing(sha, cwd)
+	---@param pattern string
+	---@return BlameBranch[]
+	local function collect(pattern)
+		local out = git({
+			'git', 'for-each-ref',
+			'--format=%(refname)',
+			'--contains', sha,
+			pattern,
+		}, cwd)
+		if not out or vim.trim(out) == '' then
+			return {}
+		end
+
+		local branches = {}
+		for _, ref in ipairs(vim.split(out, '\n', { trimempty = true })) do
+			branches[#branches + 1] = {
+				ref = ref,
+				name = ref:gsub('^refs/heads/', ''):gsub('^refs/remotes/', ''),
+			}
+		end
+		return branches
 	end
-	return head_cache[cwd]
+
+	local branches = collect('refs/heads')
+	if #branches > 0 then
+		return branches
+	end
+	-- local branch deleted / only fetched copies still have the commit
+	return collect('refs/remotes')
 end
 
---- Branches that contain `sha`; current branch first, the rest as `(+N)`.
+--- Branch the commit belongs to: the closest one containing it.
 ---@param sha string
 ---@param cwd string
 ---@return string
@@ -46,45 +79,22 @@ local function branch_label(sha, cwd)
 		return cached
 	end
 
-	---@param pattern string
-	---@return string[]
-	local function branches_containing(pattern)
-		local out = git({
-			'git', 'for-each-ref',
-			'--sort=-committerdate',
-			'--format=%(refname:short)',
-			'--contains', sha,
-			pattern,
-		}, cwd)
-		if not out or vim.trim(out) == '' then
-			return {}
-		end
-		return vim.split(out, '\n', { trimempty = true })
-	end
-
-	local names = branches_containing('refs/heads')
-	if #names == 0 then
-		-- local branch was deleted / only fetched copies still have the commit
-		names = branches_containing('refs/remotes')
-	end
-
-	local current = current_branch(cwd)
-	if current ~= '' then
-		for i, name in ipairs(names) do
-			if name == current then
-				table.remove(names, i)
-				table.insert(names, 1, name)
-				break
-			end
-		end
-	end
-
 	local label = ''
-	if #names > 0 then
-		label = names[1]
-		if #names > 1 then
-			label = ('%s (+%d)'):format(label, #names - 1)
+	local branches = branches_containing(sha, cwd)
+
+	if #branches > 0 then
+		-- Of the containing branches, name-rev returns the nearest tip, e.g.
+		-- `feat/checkout~1`. The ~N is the distance to the branch tip; branch
+		-- names cannot contain ~ or ^, so the plain name is the prefix.
+		local args = { 'git', 'name-rev', '--name-only', '--no-undefined' }
+		for _, branch in ipairs(branches) do
+			args[#args + 1] = '--refs=' .. branch.ref
 		end
+		args[#args + 1] = sha
+
+		local out = git(args, cwd)
+		local closest = out and vim.trim(out) or ''
+		label = closest:match('^[^~^]+') or branches[1].name
 	end
 
 	branch_cache[sha] = label
@@ -105,7 +115,7 @@ local function blame_with_branch(name, info)
 		)
 	end)
 	if not ok then
-		-- gitsigns internals moved: degrade to a plain, unhighlighted message
+		-- gitsigns internals moved: degrade to a plain message
 		text = (' %s, %s - %s '):format(
 			info.author or '?',
 			info.author_time and os.date('%Y-%m-%d', info.author_time) or '?',
@@ -130,7 +140,6 @@ api.nvim_set_hl(0, 'GitSignsBlameBranch', { link = 'Directory', default = true }
 
 local function clear_branch_cache()
 	branch_cache = {}
-	head_cache = {}
 end
 
 api.nvim_create_augroup('gitsigns_blame_branch', { clear = true })
